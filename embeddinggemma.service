@@ -1,0 +1,21 @@
+[Unit]
+Description=EmbeddingGemma 2 FastAPI Sidecar Service
+After=network.target
+
+[Service]
+Type=exec
+User=root
+WorkingDirectory=/opt/embeddinggemma
+Environment=EMBEDDINGGEMMA_MODEL=google/embeddinggemma-2
+Environment=HF_CACHE_DIR=/var/lib/hf-cache/st-cache
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+ExecStart=/opt/embeddinggemma/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8080 --workers 1
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=embeddinggemma
+
+[Install]
+WantedBy=multi-user.target

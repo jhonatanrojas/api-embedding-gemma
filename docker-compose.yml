@@ -1,0 +1,24 @@
+services:
+  embedding-gemma:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-embedding-gemma
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - EMBEDDINGGEMMA_MODEL=google/embeddinggemma-2
+      - HF_CACHE_DIR=/data/hf-cache
+    volumes:
+      - hf_cache_data:/data/hf-cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  hf_cache_data:
