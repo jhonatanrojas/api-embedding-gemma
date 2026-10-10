@@ -47,6 +47,28 @@ except Exception as e:
     raise e
 
 
+commercial_anchors = [
+    'Classification: foto de producto en venta de tienda e-commerce',
+    'Classification: prenda de ropa calzado o accesorio comercial',
+    'Classification: articulo o servicio de catalogo comercial'
+]
+rejection_anchors = [
+    'Classification: meme de internet captura de pantalla de chat o texto plano',
+    'Classification: persona sin ropa o desnudez explicita inapropiada',
+    'Classification: fotografia borrosa irrelevante o basura visual'
+]
+
+cached_comm_embs = None
+cached_rej_embs = None
+
+def get_moderation_anchors():
+    global cached_comm_embs, cached_rej_embs
+    if cached_comm_embs is None or cached_rej_embs is None:
+        cached_comm_embs = model.encode(commercial_anchors, normalize_embeddings=True, show_progress_bar=False)
+        cached_rej_embs = model.encode(rejection_anchors, normalize_embeddings=True, show_progress_bar=False)
+    return cached_comm_embs, cached_rej_embs
+
+
 # Helper para cargar y sanitizar imagen (optimizado para CPU)
 def load_image(image_url: Optional[str] = None, image_base64: Optional[str] = None) -> Image.Image:
     if not image_url and not image_base64:
@@ -54,7 +76,8 @@ def load_image(image_url: Optional[str] = None, image_base64: Optional[str] = No
 
     try:
         if image_url:
-            with httpx.Client(timeout=15.0) as client:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            with httpx.Client(timeout=15.0, headers=headers, follow_redirects=True) as client:
                 res = client.get(image_url)
                 res.raise_for_status()
                 raw_bytes = res.content
@@ -300,8 +323,7 @@ def moderate_image(req: ModerateImageRequest):
             'Classification: fotografia borrosa irrelevante o basura visual'
         ]
 
-        comm_embs = model.encode(commercial_anchors, normalize_embeddings=True, show_progress_bar=False)
-        rej_embs = model.encode(rejection_anchors, normalize_embeddings=True, show_progress_bar=False)
+        comm_embs, rej_embs = get_moderation_anchors()
 
         max_comm_sim = float(max([np.dot(img_emb, c) for c in comm_embs]))
         max_rej_sim = float(max([np.dot(img_emb, r) for r in rej_embs]))
